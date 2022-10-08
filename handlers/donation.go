@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	donationdto "holyways/dto/donation"
@@ -11,6 +12,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
@@ -31,7 +34,7 @@ func (h *handlerDonation) CreateDonation(w http.ResponseWriter, r *http.Request)
 	userId := int(userInfo["id"].(float64))
 	// Get dataFile from midleware and store to filename variable here ...
 	dataContex := r.Context().Value("dataFile") // add this code
-	filename := dataContex.(string)             // add this code
+	filepath := dataContex.(string)             // add this code
 
 	goal, err := strconv.Atoi(r.FormValue("goal"))
 	if err != nil {
@@ -55,9 +58,21 @@ func (h *handlerDonation) CreateDonation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Declare Context Background, Cloud Name, API Key, API Secret ...
+	var ctx = context.Background()
+	var CLOUD_NAME = os.Getenv("CLOUD_NAME")
+	var API_KEY = os.Getenv("API_KEY")
+	var API_SECRET = os.Getenv("API_SECRET")
+
+	// Add your Cloudinary credentials ...
+	cld, _ := cloudinary.NewFromParams(CLOUD_NAME, API_KEY, API_SECRET)
+
+	// Upload file to Cloudinary ...
+	resp, err := cld.Upload.Upload(ctx, filepath, uploader.UploadParams{Folder: "holyways"})
+
 	donation := models.Donation{
 		Title:       request.Title,
-		Thumbnail:   filename,
+		Thumbnail:   resp.SecureURL,
 		Goal:        request.Goal,
 		Description: request.Description,
 		UserID:      userId,
@@ -86,9 +101,9 @@ func (h *handlerDonation) FindDonation(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 	}
 	// Create Embed Path File on Image & Video property here ...
-	for i, p := range donations {
-		donations[i].Thumbnail = os.Getenv("path_file") + p.Thumbnail
-	}
+	// for i, p := range donations {
+	// 	donations[i].Thumbnail = os.Getenv("path_file") + p.Thumbnail
+	// }
 
 	w.WriteHeader(http.StatusOK)
 	response := dto.SuccessResult{Code: http.StatusOK, Data: donations}
@@ -128,7 +143,7 @@ func (h *handlerDonation) GetDonation(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	donation.Thumbnail = os.Getenv("path_file") + donation.Thumbnail
+	// donation.Thumbnail = os.Getenv("path_file") + donation.Thumbnail
 
 	w.WriteHeader(http.StatusOK)
 	response := dto.SuccessResult{Code: http.StatusOK, Data: (donation)}
