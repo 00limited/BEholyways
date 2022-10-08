@@ -69,6 +69,9 @@ func (h *handlerDonation) CreateDonation(w http.ResponseWriter, r *http.Request)
 
 	// Upload file to Cloudinary ...
 	resp, err := cld.Upload.Upload(ctx, filepath, uploader.UploadParams{Folder: "holyways"})
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	donation := models.Donation{
 		Title:       request.Title,
